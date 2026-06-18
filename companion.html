@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Life HUD — Companion</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:      #0a0a0a;
+      --surface: #111111;
+      --surface2: #1a1a1a;
+      --border:  #222222;
+      --border2: #333333;
+      --cyan:    #00d4ff;
+      --white:   #ffffff;
+      --muted:   #666666;
+      --danger:  #ff4444;
+      --green:   #00ff88;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--white);
+      font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+      font-size: 16px;
+      line-height: 1.5;
+      padding-bottom: 64px;
+    }
+
+    /* ── Header ───────────────────────────────────────────────── */
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 20px;
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .header-text h1 {
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--cyan);
+      letter-spacing: 4px;
+    }
+
+    .header-text p {
+      font-size: 14px;
+      color: var(--muted);
+      margin-top: 1px;
+    }
+
+    #contact-count-pill {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--bg);
+      background: var(--cyan);
+      border-radius: 20px;
+      padding: 4px 12px;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    /* ── Layout ───────────────────────────────────────────────── */
+    .container {
+      max-width: 480px;
+      margin: 0 auto;
+      padding: 20px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    /* ── Card sections ────────────────────────────────────────── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px 16px;
+    }
+
+    .section-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--white);
+      margin-bottom: 16px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    /* ── Form ─────────────────────────────────────────────────── */
+    label {
+      display: block;
+      font-size: 12px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      margin-bottom: 5px;
+      margin-top: 14px;
+    }
+
+    label:first-child { margin-top: 0; }
+
+    input[type="text"],
+    input[type="tel"],
+    input[type="date"],
+    textarea {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px solid var(--border2);
+      border-radius: 8px;
+      padding: 12px 14px;
+      color: var(--white);
+      font-size: 16px;
+      font-family: inherit;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    input:focus, textarea:focus {
+      border-color: var(--cyan);
+    }
+
+    textarea { resize: vertical; min-height: 88px; }
+
+    input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(1); }
+
+    .field-error {
+      font-size: 13px;
+      color: var(--danger);
+      margin-top: 4px;
+    }
+
+    /* ── Photo upload ─────────────────────────────────────────── */
+    .photo-upload-wrap {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-top: 4px;
+    }
+
+    #photo-preview-circle {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background: var(--surface2);
+      border: 2px solid var(--border2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 28px;
+      color: var(--muted);
+      flex-shrink: 0;
+      background-size: cover;
+      background-position: center;
+      overflow: hidden;
+      transition: border-color 0.15s;
+    }
+
+    #photo-preview-circle.has-photo {
+      border-color: var(--cyan);
+    }
+
+    .photo-upload-side {
+      flex: 1;
+    }
+
+    .photo-label-btn {
+      display: inline-block;
+      background: var(--surface2);
+      border: 1px solid var(--border2);
+      border-radius: 8px;
+      padding: 10px 16px;
+      cursor: pointer;
+      font-size: 14px;
+      color: var(--white);
+      font-weight: 600;
+      transition: border-color 0.15s;
+      margin-top: 0;
+      text-transform: none;
+      letter-spacing: 0;
+    }
+
+    .photo-label-btn:active { opacity: 0.8; }
+
+    #inp-photo { display: none; }
+
+    #photo-size-info {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 6px;
+      min-height: 16px;
+    }
+
+    /* ── Buttons ──────────────────────────────────────────────── */
+    .btn-row {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    .btn {
+      flex: 1;
+      padding: 13px 16px;
+      border: none;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: opacity 0.15s;
+      font-family: inherit;
+    }
+
+    .btn:active { opacity: 0.8; }
+
+    .btn-primary {
+      background: var(--cyan);
+      color: #000000;
+    }
+
+    .btn-secondary {
+      background: transparent;
+      color: var(--white);
+      border: 1px solid #555555;
+    }
+
+    .btn-danger {
+      background: transparent;
+      color: var(--danger);
+      border: 1px solid var(--danger);
+    }
+
+    /* ── Contact list ─────────────────────────────────────────── */
+    #contact-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    #no-contacts-msg {
+      font-size: 15px;
+      color: var(--muted);
+      text-align: center;
+      padding: 28px 0;
+    }
+
+    .contact-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px;
+      transition: opacity 0.25s;
+    }
+
+    .contact-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .contact-thumb {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      border: 1px solid var(--border);
+      background-size: cover;
+      background-position: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--cyan);
+      background-color: var(--surface2);
+    }
+
+    .contact-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .contact-name {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--white);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .contact-bday {
+      font-size: 13px;
+      color: var(--cyan);
+      display: block;
+      margin-top: 2px;
+    }
+
+    .contact-btns {
+      display: flex;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+
+    .btn-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--surface2);
+      color: var(--muted);
+      font-size: 16px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: border-color 0.15s, color 0.15s;
+      flex-shrink: 0;
+    }
+
+    .btn-icon:active { opacity: 0.7; }
+
+    .btn-edit:hover  { border-color: var(--cyan);   color: var(--cyan); }
+    .btn-delete:hover { border-color: var(--danger); color: var(--danger); }
+
+    /* Inline delete confirm */
+    .delete-confirm {
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid var(--border);
+      font-size: 14px;
+      color: var(--white);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .delete-confirm span { flex: 1; }
+
+    .btn-confirm-yes {
+      padding: 6px 16px;
+      border-radius: 6px;
+      border: 1px solid var(--danger);
+      background: transparent;
+      color: var(--danger);
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .btn-confirm-no {
+      padding: 6px 16px;
+      border-radius: 6px;
+      border: 1px solid var(--border2);
+      background: transparent;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    /* ── Collapsible export/import ────────────────────────────── */
+    .collapsible-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      user-select: none;
+      padding: 14px 16px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--white);
+      transition: border-color 0.15s;
+    }
+
+    .collapsible-header:active { opacity: 0.8; }
+    .collapsible-header.open { border-radius: 12px 12px 0 0; border-color: var(--cyan); }
+
+    #io-chevron {
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    #io-body {
+      background: var(--surface);
+      border: 1px solid var(--cyan);
+      border-top: none;
+      border-radius: 0 0 12px 12px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .btn-io {
+      display: block;
+      width: 100%;
+      padding: 13px 16px;
+      border-radius: 8px;
+      border: 1px solid var(--border2);
+      background: var(--surface2);
+      color: var(--white);
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      text-align: center;
+      font-family: inherit;
+      transition: border-color 0.15s;
+    }
+
+    .btn-io:hover { border-color: var(--cyan); }
+    .btn-io:active { opacity: 0.8; }
+
+    #inp-import { display: none; }
+
+    #import-preview {
+      margin-top: 10px;
+      background: var(--surface2);
+      border: 1px solid var(--border2);
+      border-radius: 8px;
+      padding: 14px;
+    }
+
+    #import-preview-text {
+      font-size: 14px;
+      color: var(--white);
+      margin-bottom: 12px;
+      line-height: 1.5;
+    }
+
+    #import-error {
+      font-size: 13px;
+      color: var(--danger);
+      margin-top: 8px;
+    }
+
+    #storage-info {
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    /* ── Toast ────────────────────────────────────────────────── */
+    #toast {
+      position: fixed;
+      bottom: 28px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--cyan);
+      color: #000000;
+      font-weight: 700;
+      font-size: 15px;
+      padding: 12px 28px;
+      border-radius: 24px;
+      z-index: 100;
+      opacity: 1;
+      transition: opacity 0.4s;
+      white-space: nowrap;
+      pointer-events: none;
+    }
+
+    #toast.toast-fade { opacity: 0; }
+
+    /* ── Utility ──────────────────────────────────────────────── */
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-text">
+    <h1>LIFE HUD</h1>
+    <p>Contact Manager</p>
+  </div>
+  <div id="contact-count-pill">0 contacts</div>
+</header>
+
+<div class="container">
+
+  <!-- ── Add / Edit Contact ─────────────────────────────────── -->
+  <div class="card">
+    <div class="section-title" id="form-title">Add Contact</div>
+
+    <form id="contact-form" novalidate>
+      <label for="inp-name">Full Name *</label>
+      <input type="text" id="inp-name" placeholder="Full name" autocomplete="name">
+      <div id="name-error" class="field-error hidden">Name is required</div>
+
+      <label for="inp-birthday">Birthday</label>
+      <input type="date" id="inp-birthday">
+
+      <label for="inp-phone">Phone</label>
+      <input type="tel" id="inp-phone" placeholder="+1 (555) 000-0000" autocomplete="tel">
+
+      <label for="inp-notes">Notes</label>
+      <textarea id="inp-notes" rows="4" placeholder="Notes, reminders, context…"></textarea>
+
+      <label>Photo</label>
+      <div class="photo-upload-wrap">
+        <div id="photo-preview-circle">?</div>
+        <div class="photo-upload-side">
+          <label class="photo-label-btn" for="inp-photo">Choose Photo</label>
+          <input type="file" id="inp-photo" accept="image/*">
+          <div id="photo-size-info"></div>
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <button type="submit" id="btn-save" class="btn btn-primary">Add Contact</button>
+        <button type="button" id="btn-cancel" class="btn btn-secondary hidden">Cancel</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- ── Contact List ───────────────────────────────────────── -->
+  <div>
+    <div class="section-title" style="margin-bottom:12px">Contacts</div>
+    <div id="contact-list"></div>
+  </div>
+
+  <!-- ── Export / Import (collapsible) ─────────────────────── -->
+  <div>
+    <div class="collapsible-header" id="io-header">
+      <span>Backup &amp; Restore</span>
+      <span id="io-chevron">▼</span>
+    </div>
+    <div id="io-body" class="hidden">
+      <button class="btn-io" id="btn-export">Export JSON</button>
+
+      <div>
+        <label class="btn-io" for="inp-import" style="margin:0">Import JSON</label>
+        <input type="file" id="inp-import" accept=".json">
+        <div id="import-preview" class="hidden">
+          <p id="import-preview-text"></p>
+          <div class="btn-row" style="margin-top:10px">
+            <button type="button" id="btn-replace-all" class="btn btn-danger">Replace All</button>
+            <button type="button" id="btn-import-cancel" class="btn btn-secondary">Cancel</button>
+          </div>
+        </div>
+        <div id="import-error" class="hidden"></div>
+      </div>
+
+      <div id="storage-info"></div>
+    </div>
+  </div>
+
+</div><!-- /container -->
+
+<div id="toast" class="hidden"></div>
+
+<script src="/companion/companion.js"></script>
+</body>
+</html>

@@ -1,0 +1,17 @@
+{
+  "name": "Life HUD",
+  "short_name": "Life HUD",
+  "description": "Heads-up display for Meta Ray-Ban glasses — compass, weather, and people cards.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#000000",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/icons/icon-96.png",
+      "sizes": "96x96",
+      "type": "image/png"
+    }
+  ]
+}

@@ -1,0 +1,1028 @@
+/* ============================================================
+   Life HUD — Meta Ray-Ban Display Web App
+   600×600px, additive waveguide, black = transparent
+   Input: ArrowKeys + Enter only
+   ============================================================ */
+
+/* ── Reset & Base ─────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --cyan: #00d4ff;
+  --white: #ffffff;
+  --bg: #000000;
+  --surface: #0a0a0a;
+  --surface2: #111111;
+  --surface3: #1a1a1a;
+  --border: #2a2a2a;
+  --muted: #555555;
+  --warn: #ffaa00;
+  --danger: #ff4444;
+  --green: #00ff88;
+  --font: 'Courier New', 'SF Mono', monospace;
+}
+
+html, body {
+  width: 600px;
+  height: 600px;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--white);
+  font-family: var(--font);
+  font-size: 16px;
+  line-height: 1.4;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* ── App Shell ────────────────────────────────────────────── */
+#app {
+  width: 600px;
+  height: 600px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ── Tab Bar ──────────────────────────────────────────────── */
+#tab-bar {
+  display: flex;
+  width: 600px;
+  height: 56px;
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  color: var(--muted);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border-bottom: 2px solid transparent;
+  transition: color 0.15s, border-color 0.15s;
+  pointer-events: none;
+}
+
+.tab.active {
+  color: var(--cyan);
+  border-bottom-color: var(--cyan);
+}
+
+.tab-icon {
+  font-size: 18px;
+  margin-right: 6px;
+}
+
+/* ── Tab Content Area ─────────────────────────────────────── */
+#content {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+}
+
+.tab-panel {
+  position: absolute;
+  inset: 0;
+  display: none;
+  flex-direction: column;
+  padding: 16px;
+  overflow: hidden;
+}
+
+.tab-panel.active {
+  display: flex;
+}
+
+/* ── Focusable Elements ───────────────────────────────────── */
+.focusable {
+  min-height: 88px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px 16px;
+  background: var(--surface2);
+  cursor: default;
+  transition: border-color 0.12s, box-shadow 0.12s;
+  outline: none;
+}
+
+.focusable.focused {
+  border-color: var(--cyan);
+  box-shadow: 0 0 0 1px var(--cyan), 0 0 12px rgba(0, 212, 255, 0.25);
+}
+
+/* ── Typography ───────────────────────────────────────────── */
+.label {
+  font-size: 11px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 4px;
+}
+
+.value-xl {
+  font-size: 48px;
+  font-weight: 700;
+  color: var(--cyan);
+  line-height: 1;
+}
+
+.value-lg {
+  font-size: 28px;
+  font-weight: 600;
+  color: var(--white);
+  line-height: 1.2;
+}
+
+.value-md {
+  font-size: 20px;
+  color: var(--white);
+}
+
+.value-sm {
+  font-size: 16px;
+  color: var(--white);
+}
+
+.dim {
+  color: var(--muted);
+}
+
+.accent {
+  color: var(--cyan);
+}
+
+.warn {
+  color: var(--warn);
+}
+
+.good {
+  color: var(--green);
+}
+
+/* ── Status Bar ───────────────────────────────────────────── */
+#status-bar {
+  height: 28px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  font-size: 12px;
+  color: var(--muted);
+  gap: 16px;
+}
+
+#status-bar .status-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+#status-bar .status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--muted);
+}
+
+#status-bar .status-dot.on {
+  background: var(--green);
+}
+
+/* ── Compass Module ───────────────────────────────────────── */
+#compass-panel {
+  gap: 8px;
+}
+
+/* ── Nav target banner ──────────────────────────────────── */
+#compass-nav-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 64px;
+  flex-shrink: 0;
+  background: rgba(0, 212, 255, 0.08);
+  border: 1px solid var(--cyan);
+  border-radius: 8px;
+  padding: 0 16px;
+}
+
+#nav-banner-arrow {
+  font-size: 40px;
+  color: var(--cyan);
+  min-width: 44px;
+  text-align: center;
+  line-height: 1;
+  transition: content 0.1s;
+}
+
+#nav-banner-info {
+  flex: 1;
+}
+
+#nav-banner-name {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--white);
+}
+
+#nav-banner-dist {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--cyan);
+}
+
+#nav-banner-label {
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  color: var(--cyan);
+  text-transform: uppercase;
+  opacity: 0.7;
+}
+
+/* ── Heading block ──────────────────────────────────────── */
+#compass-heading-block {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+  min-height: 72px;
+  padding: 4px 0;
+}
+
+#compass-heading-left {
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Accuracy badge ─────────────────────────────────────── */
+#compass-accuracy-badge {
+  font-size: 13px;
+  color: var(--warn);
+  background: rgba(255, 170, 0, 0.1);
+  border: 1px solid rgba(255, 170, 0, 0.4);
+  border-radius: 6px;
+  padding: 6px 10px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  align-self: center;
+}
+
+/* ── Compass rose ───────────────────────────────────────── */
+#compass-rose-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 144px;
+  flex-shrink: 0;
+}
+
+#compass-rose {
+  position: relative;
+  width: 144px;
+  height: 144px;
+}
+
+/* Fixed outer ring */
+#compass-ring {
+  position: absolute;
+  inset: 0;
+  border: 2px solid var(--border);
+  border-radius: 50%;
+}
+
+/* Fixed "you are here" pointer — small triangle at 12 o'clock
+   Points inward to show "you face this direction" */
+#compass-pointer {
+  position: absolute;
+  left: 50%;
+  top: 0px;
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 10px solid var(--cyan);
+  transform: translateX(-50%);
+  z-index: 3;
+}
+
+/* Rotating compass card — contains ticks + labels + N spike */
+#compass-needle-wrap {
+  position: absolute;
+  inset: 0;
+  transition: transform 0.15s ease-out;
+}
+
+/* Tick marks — all positioned at top center, rotated around rose center */
+.compass-tick {
+  position: absolute;
+  left: 50%;
+  top: 4px;
+  width: 2px;
+  height: 9px;
+  background: var(--border);
+  transform-origin: 50% 68px;  /* 144/2 = 72; 72-4 = 68 */
+  margin-left: -1px;
+}
+
+.compass-tick.cardinal {
+  background: var(--muted);
+  height: 14px;
+  width: 2px;
+}
+
+/* North tick — highlighted */
+.compass-tick.north {
+  background: var(--cyan);
+  height: 18px;
+  width: 3px;
+  margin-left: -1.5px;
+}
+
+/* North spike on the rotating card — filled triangle pointing up (= North direction) */
+#compass-n-spike {
+  position: absolute;
+  left: 50%;
+  top: 22px;
+  width: 0;
+  height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-bottom: 14px solid var(--cyan);
+  transform: translateX(-50%);
+}
+
+/* Cardinal labels inside the rotating card */
+.compass-card-label {
+  position: absolute;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted);
+  line-height: 1;
+}
+
+.cn-N {
+  top: 38px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: var(--cyan);
+}
+
+.cn-S {
+  bottom: 38px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.cn-E {
+  right: 38px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.cn-W {
+  left: 38px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+/* Fixed center pivot */
+#compass-center {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 8px;
+  height: 8px;
+  background: var(--white);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 4;
+}
+
+/* ── Enable compass button ──────────────────────────────── */
+#enable-compass-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 6px;
+  text-align: center;
+}
+
+/* ── Drop pin button ────────────────────────────────────── */
+#drop-pin-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  font-size: 20px;
+  color: var(--white);
+}
+
+#drop-pin-btn .btn-icon {
+  font-size: 22px;
+  color: var(--cyan);
+}
+
+/* ── Waypoints list ─────────────────────────────────────── */
+#waypoints-list {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  /* Hide scrollbar — navigation is via ArrowUp/Down + scrollIntoView */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+#waypoints-list::-webkit-scrollbar {
+  display: none;
+}
+
+.waypoint-item {
+  /* min-height from .focusable (88px) takes precedence */
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+}
+
+.waypoint-item.nav-target {
+  border-color: var(--cyan);
+  background: rgba(0, 212, 255, 0.06);
+}
+
+.wp-left {
+  flex: 1;
+  min-width: 0;
+}
+
+.wp-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  margin-left: 8px;
+}
+
+.waypoint-name {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--white);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.nav-badge {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--bg);
+  background: var(--cyan);
+  border-radius: 3px;
+  padding: 1px 5px;
+  letter-spacing: 0.08em;
+  vertical-align: middle;
+}
+
+.waypoint-info {
+  font-size: 13px;
+  color: var(--muted);
+  margin-top: 3px;
+}
+
+.waypoint-arrow {
+  font-size: 30px;
+  color: var(--cyan);
+  min-width: 36px;
+  text-align: center;
+  line-height: 1;
+}
+
+.waypoint-dist {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--cyan);
+  text-align: right;
+  white-space: nowrap;
+}
+
+#no-waypoints {
+  font-size: 16px;
+  color: var(--muted);
+  text-align: center;
+  padding: 20px 12px;
+  line-height: 1.5;
+}
+
+/* ── Weather Module ───────────────────────────────────────── */
+#weather-panel {
+  gap: 0;
+}
+
+/* ── Loading + error ────────────────────────────────────── */
+#weather-loading,
+#weather-error {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  text-align: center;
+  font-size: 18px;
+  color: var(--muted);
+}
+
+#weather-loading-text {
+  font-size: 18px;
+  color: var(--muted);
+}
+
+#weather-error {
+  color: var(--danger);
+  font-size: 18px;
+}
+
+/* ── Main content container ─────────────────────────────── */
+#weather-content {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  gap: 8px;
+  overflow: hidden;
+}
+
+/* ── ZONE 1: Solar block (flex:1, first focusable = refresh)─ */
+#weather-solar-block {
+  flex: 1;
+  min-height: 88px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 6px;
+}
+
+#solar-icon {
+  font-size: 34px;
+  line-height: 1;
+}
+
+#solar-status-text {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--white);
+  line-height: 1.2;
+}
+
+#solar-countdown {
+  font-size: 18px;
+  color: var(--cyan);
+  min-height: 22px;
+}
+
+/* ── Solar pulsing glow animations ──────────────────────── */
+@keyframes pulse-amber {
+  from {
+    box-shadow:   0 0 0   0 rgba(255, 170, 0, 0);
+    border-color: var(--border);
+  }
+  to {
+    box-shadow:   0 0 20px 6px rgba(255, 170, 0, 0.4);
+    border-color: var(--warn);
+  }
+}
+
+@keyframes pulse-blue {
+  from {
+    box-shadow:   0 0 0   0 rgba(68, 136, 255, 0);
+    border-color: var(--border);
+  }
+  to {
+    box-shadow:   0 0 20px 6px rgba(68, 136, 255, 0.4);
+    border-color: #4488ff;
+  }
+}
+
+.solar-pulse-amber {
+  animation: pulse-amber 1.5s ease-in-out infinite alternate;
+}
+
+.solar-pulse-blue {
+  animation: pulse-blue 1.5s ease-in-out infinite alternate;
+}
+
+/* ── ZONE 2: 2×2 Weather grid (fixed 240px) ─────────────── */
+#weather-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: 8px;
+  height: 240px;
+  flex-shrink: 0;
+}
+
+/* Individual weather cell — focusable but Enter = no-op */
+.weather-cell {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 3px;
+  padding: 10px 14px;
+  /* min-height: 88px inherited from .focusable */
+}
+
+.cell-header {
+  font-size: 11px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 2px;
+}
+
+.cell-value-big {
+  font-size: 34px;
+  font-weight: 700;
+  color: var(--white);
+  line-height: 1;
+}
+
+.cell-value-med {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--white);
+  line-height: 1;
+}
+
+.cell-sub {
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.3;
+}
+
+.cell-sub-line {
+  font-size: 16px;
+  color: var(--white);
+  line-height: 1.7;
+}
+
+/* ── ZONE 3: Footer ─────────────────────────────────────── */
+#weather-footer {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 2px 0;
+}
+
+.footer-line {
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+/* ── Nav hint (bottom, always visible) ──────────────────── */
+#weather-nav-hint {
+  flex-shrink: 0;
+  font-size: 13px;
+  color: var(--muted);
+  opacity: 0.55;
+  text-align: center;
+  padding: 2px 0 4px;
+}
+
+/* ── People Module ────────────────────────────────────────── */
+#people-panel {
+  padding: 0;
+  gap: 0;
+}
+
+/* Empty state */
+#no-contacts {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  text-align: center;
+}
+
+/* Full layout container when contacts exist */
+#people-layout {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  flex: 1;
+}
+
+/* Top 40px: PEOPLE label + counter */
+#people-header {
+  height: 40px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+}
+
+#people-label {
+  font-size: 13px;
+  color: #666666;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+#people-counter {
+  font-size: 14px;
+  color: var(--cyan);
+}
+
+/* Middle: card centering wrapper */
+#people-card-wrap {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  padding: 0 10px;
+}
+
+/* Contact card: 540×440 max, dark background */
+#contact-card {
+  width: 540px;
+  height: 100%;
+  max-height: 440px;
+  background: #111111;
+  border: 1px solid #222222;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 16px 20px;
+  gap: 8px;
+  overflow: hidden;
+  min-height: 0;
+}
+
+#contact-card.focused {
+  border-color: var(--cyan);
+  box-shadow: 0 0 16px rgba(0, 212, 255, 0.3);
+}
+
+/* Photo area: 110px tall */
+#contact-photo-wrap {
+  height: 110px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Photo circle: 90×90 */
+#contact-photo {
+  width: 90px;
+  height: 90px;
+  border-radius: 50%;
+  border: 2px solid #333333;
+  background: #1a1a1a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32px;
+  color: #ffffff;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+#contact-photo.has-photo {
+  border-color: var(--cyan);
+}
+
+#contact-photo img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+/* Name: 24px bold white, single line ellipsis */
+#contact-name {
+  font-size: 24px;
+  font-weight: 700;
+  color: #ffffff;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  flex-shrink: 0;
+}
+
+/* Birthday: dynamic color via JS */
+#contact-birthday {
+  font-size: 16px;
+  text-align: center;
+  flex-shrink: 0;
+  border-radius: 4px;
+  padding: 2px 6px;
+}
+
+@keyframes pulse-birthday {
+  from { box-shadow: 0 0 0   0 rgba(255, 170, 0, 0); }
+  to   { box-shadow: 0 0 10px 3px rgba(255, 170, 0, 0.5); }
+}
+
+.birthday-pulse {
+  animation: pulse-birthday 1.5s ease-in-out infinite alternate;
+}
+
+/* Phone: 15px cyan */
+#contact-phone {
+  font-size: 15px;
+  color: var(--cyan);
+  text-align: center;
+  flex-shrink: 0;
+}
+
+/* Collapsed notes preview: 14px #aaa, max 2 lines */
+#contact-notes-preview {
+  font-size: 14px;
+  color: #aaaaaa;
+  text-align: center;
+  line-height: 1.4;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  flex-shrink: 0;
+  max-width: 100%;
+}
+
+/* Divider between header and full notes (expanded only) */
+#contact-divider {
+  width: 100%;
+  height: 1px;
+  background: #333333;
+  flex-shrink: 0;
+}
+
+/* Full notes (expanded): fills remaining card space, scrollable */
+#contact-notes-full {
+  font-size: 14px;
+  color: #cccccc;
+  line-height: 1.5;
+  width: 100%;
+  flex: 1;
+  overflow-y: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  text-align: left;
+}
+
+#contact-notes-full::-webkit-scrollbar {
+  display: none;
+}
+
+/* Bottom hint */
+#people-hint {
+  height: 44px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  color: #555555;
+}
+
+/* Card slide-in animations */
+@keyframes slide-in-right {
+  from { transform: translateX(30px);  opacity: 0.7; }
+  to   { transform: translateX(0);     opacity: 1;   }
+}
+
+@keyframes slide-in-left {
+  from { transform: translateX(-30px); opacity: 0.7; }
+  to   { transform: translateX(0);     opacity: 1;   }
+}
+
+.slide-from-right {
+  animation: slide-in-right 0.15s ease forwards;
+}
+
+.slide-from-left {
+  animation: slide-in-left 0.15s ease forwards;
+}
+
+/* ── Map Module ───────────────────────────────────────────── */
+#map-panel {
+  padding: 0;
+  gap: 0;
+  overflow: hidden;
+}
+
+#waypoint-map {
+  flex: 1;
+  width: 100%;
+  min-height: 0;
+  background: #000;
+}
+
+#map-hint {
+  height: 36px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  color: var(--muted);
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+}
+
+/* Leaflet dark theme overrides */
+.leaflet-container {
+  background: #000;
+  font-family: var(--font);
+}
+
+.leaflet-control-attribution {
+  display: none !important;
+}
+
+/* Waypoint markers */
+.waypoint-marker {
+  background: transparent !important;
+  border: none !important;
+}
+
+.wp-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--cyan);
+  border: 2px solid var(--bg);
+  margin: 0 auto 2px;
+  box-shadow: 0 0 6px rgba(0, 212, 255, 0.6);
+}
+
+.wp-label {
+  font-size: 10px;
+  color: var(--cyan);
+  text-align: center;
+  white-space: nowrap;
+  text-shadow: 0 0 4px rgba(0, 0, 0, 0.9);
+  line-height: 1;
+}
+
+/* GPS position marker */
+.gps-marker {
+  background: transparent !important;
+  border: none !important;
+}
+
+.gps-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--green);
+  border: 3px solid var(--bg);
+  box-shadow: 0 0 8px rgba(0, 255, 136, 0.7);
+}
+
+/* ── Utility ──────────────────────────────────────────────── */
+.hidden {
+  display: none !important;
+}
+
+.pulse {
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.spin {
+  animation: spin 1.2s linear infinite;
+  display: inline-block;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}

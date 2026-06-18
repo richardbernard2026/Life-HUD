@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=600, initial-scale=1.0, user-scalable=no">
+  <title>Life HUD</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon-96.png" sizes="96x96">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+</head>
+<body>
+<div id="app">
+
+  <!-- ── Tab Bar ────────────────────────────────────────── -->
+  <div id="tab-bar">
+    <div class="tab active" data-tab="compass">
+      <span class="tab-icon">&#x2B24;</span> Compass
+    </div>
+    <div class="tab" data-tab="weather">
+      <span class="tab-icon">&#x2600;</span> Weather
+    </div>
+    <div class="tab" data-tab="people">
+      <span class="tab-icon">&#x25A0;</span> People
+    </div>
+    <div class="tab" data-tab="map">
+      <span class="tab-icon">&#x25CE;</span> Map
+    </div>
+  </div>
+
+  <!-- ── Content Area ───────────────────────────────────── -->
+  <div id="content">
+
+    <!-- TAB 1: Compass + Waypoints -->
+    <div class="tab-panel active" id="compass-panel">
+
+      <!-- Nav target banner (hidden until a waypoint is selected as target) -->
+      <div id="compass-nav-banner" class="hidden">
+        <div id="nav-banner-arrow">&#x2191;</div>
+        <div id="nav-banner-info">
+          <div id="nav-banner-name">—</div>
+          <div id="nav-banner-dist">—</div>
+        </div>
+        <div id="nav-banner-label">NAVIGATING</div>
+      </div>
+
+      <!-- Enable button (shown until permission granted) -->
+      <div class="focusable" id="enable-compass-btn">
+        <div style="font-size:32px">&#x25CE;</div>
+        <div class="enable-text" style="font-size:20px;color:#00d4ff;margin-top:8px">Press Enter to enable compass</div>
+        <div style="font-size:14px;color:#555;margin-top:4px">Requires motion sensor permission</div>
+      </div>
+
+      <!-- Heading display (hidden until enabled) -->
+      <div id="compass-heading-block" class="hidden">
+        <div id="compass-heading-left">
+          <div id="compass-degrees" style="font-size:56px;font-weight:700;color:#00d4ff;line-height:1">0&#xb0;</div>
+          <div id="compass-cardinal" style="font-size:22px;font-weight:600;color:#fff;margin-top:2px">N</div>
+        </div>
+        <div id="compass-accuracy-badge" class="hidden">
+          <span>&#9888;</span> Magnetic
+        </div>
+      </div>
+
+      <!-- Compass rose (hidden until enabled) -->
+      <div id="compass-rose-container" class="hidden">
+        <div id="compass-rose">
+          <!-- Fixed outer ring -->
+          <div id="compass-ring"></div>
+          <!-- Fixed "you are here" pointer at 12 o'clock -->
+          <div id="compass-pointer"></div>
+          <!-- Rotating dial — rotates at rotate(-heading deg) -->
+          <div id="compass-needle-wrap">
+            <!--
+              Ticks (72 total at 5° each) injected by compass.js buildRoseTicks().
+              Cardinal labels are inside the rotating wrap so they stay aligned
+              with absolute compass directions as the device heading changes.
+              When heading=90° (East), the wrap rotates -90°, so:
+                N label moves to LEFT  (correct — North is to your left when facing East)
+                E label moves to TOP   (correct — you are facing East)
+            -->
+            <!-- North spike: filled triangle inside rotating dial -->
+            <div id="compass-n-spike"></div>
+            <!-- Cardinal labels rotate with the dial -->
+            <span class="compass-card-label cn-N">N</span>
+            <span class="compass-card-label cn-E">E</span>
+            <span class="compass-card-label cn-S">S</span>
+            <span class="compass-card-label cn-W">W</span>
+          </div>
+          <!-- Fixed center pivot dot -->
+          <div id="compass-center"></div>
+        </div>
+      </div>
+
+      <!-- Drop Pin button (hidden until enabled) -->
+      <div class="focusable hidden" id="drop-pin-btn">
+        <span class="btn-icon">&#x25CF;</span>
+        <span class="btn-text">Drop Pin Here</span>
+      </div>
+
+      <!-- Waypoints list — overflow-y: auto, scrollbar hidden via CSS -->
+      <div id="waypoints-list"></div>
+
+    </div><!-- /compass-panel -->
+
+
+    <!-- TAB 2: Golden Hour + Weather -->
+    <!-- Auto-triggers GPS + fetch on first tab focus via MutationObserver in weather.js -->
+    <div class="tab-panel" id="weather-panel">
+
+      <!-- Loading state: text updated by JS (phase 1 = GPS, phase 2 = fetch) -->
+      <div id="weather-loading" class="hidden">
+        <div class="spin" style="font-size:30px">&#x25CB;</div>
+        <div id="weather-loading-text">&#x1F4E1; Getting location&#x2026;</div>
+      </div>
+
+      <!-- Error state -->
+      <div id="weather-error" class="hidden"></div>
+
+      <!-- Main weather content (shown after data loads) -->
+      <div id="weather-content" class="hidden">
+
+        <!-- ZONE 1 (top, flex:1): Solar status block — first focusable, Enter = refresh -->
+        <div class="focusable" id="weather-solar-block">
+          <div id="solar-icon">&#x2600;</div>
+          <div id="solar-status-text">Loading&#x2026;</div>
+          <div id="solar-countdown"></div>
+        </div>
+
+        <!-- ZONE 2 (middle, 240px): 2&#xd7;2 weather grid — focusable cells, Enter = no-op -->
+        <div id="weather-grid">
+
+          <!-- Cell 1 top-left: Temperature + condition -->
+          <div class="weather-cell focusable" id="cell-temp">
+            <div class="cell-header">&#x1F321; Temp</div>
+            <div class="cell-value-big" id="temp-value">&#x2014;</div>
+            <div class="cell-sub" id="weather-condition">&#x2014;</div>
+          </div>
+
+          <!-- Cell 2 top-right: Wind speed + direction + relative label -->
+          <div class="weather-cell focusable" id="cell-wind">
+            <div class="cell-header">&#x1F4A8; Wind</div>
+            <div class="cell-value-med" id="wind-speed">&#x2014;</div>
+            <div class="cell-sub" id="wind-dir-abs">&#x2014;</div>
+            <div class="cell-sub" id="wind-dir-rel">&#x2014;</div>
+          </div>
+
+          <!-- Cell 3 bottom-left: UV index -->
+          <div class="weather-cell focusable" id="cell-uv">
+            <div class="cell-header">&#x1F506; UV</div>
+            <div class="cell-value-med" id="uv-value">&#x2014;</div>
+            <div class="cell-sub" id="uv-label">&#x2014;</div>
+          </div>
+
+          <!-- Cell 4 bottom-right: Sunrise + Sunset from API daily data -->
+          <div class="weather-cell focusable" id="cell-sun">
+            <div class="cell-header">Sun</div>
+            <div class="cell-sub-line" id="sunrise-display">&#x1F305; &#x2014;</div>
+            <div class="cell-sub-line" id="sunset-display">&#x1F307; &#x2014;</div>
+          </div>
+
+        </div><!-- /weather-grid -->
+
+        <!-- ZONE 3 (bottom): Cache age + solar noon + location -->
+        <div id="weather-footer">
+          <div id="weather-updated" class="footer-line"></div>
+          <div id="solar-noon-display" class="footer-line"></div>
+          <div id="weather-location" class="footer-line"></div>
+        </div>
+
+        <!-- Nav hint (permanent) -->
+        <div id="weather-nav-hint">&#x2191;&#x2193; nav &nbsp; &#x21b5; refresh</div>
+
+      </div><!-- /weather-content -->
+
+    </div><!-- /weather-panel -->
+
+
+    <!-- TAB 3: People Cards -->
+    <div class="tab-panel" id="people-panel">
+
+      <!-- Empty state (shown when no contacts) -->
+      <div id="no-contacts">
+        <div style="font-size:20px;color:#ffffff">No contacts yet</div>
+        <div style="font-size:16px;color:#00d4ff">Visit /companion on your phone</div>
+      </div>
+
+      <!-- People layout: header + card + hint (shown when contacts exist) -->
+      <div id="people-layout" class="hidden">
+
+        <!-- Top 40px: PEOPLE label + card counter -->
+        <div id="people-header">
+          <span id="people-label">People</span>
+          <span id="people-counter">1 / 1</span>
+        </div>
+
+        <!-- Middle: centered contact card -->
+        <div id="people-card-wrap">
+          <div id="contact-card" class="focusable">
+
+            <!-- Photo area (110px zone) -->
+            <div id="contact-photo-wrap">
+              <div id="contact-photo"></div>
+            </div>
+
+            <!-- Name: 24px bold white, single line ellipsis -->
+            <div id="contact-name"></div>
+
+            <!-- Birthday: dynamic color/pulse (hidden if empty) -->
+            <div id="contact-birthday" class="hidden"></div>
+
+            <!-- Phone: 15px cyan (hidden if empty) -->
+            <div id="contact-phone" class="hidden"></div>
+
+            <!-- Collapsed: notes preview (hidden if empty or expanded) -->
+            <div id="contact-notes-preview" class="hidden"></div>
+
+            <!-- Expanded: divider + scrollable full notes -->
+            <div id="contact-divider" class="hidden"></div>
+            <div id="contact-notes-full" class="hidden"></div>
+
+          </div>
+        </div>
+
+        <!-- Bottom: navigation / scroll hint -->
+        <div id="people-hint"></div>
+
+      </div><!-- /people-layout -->
+
+    </div><!-- /people-panel -->
+
+    <!-- TAB 4: Map -->
+    <div class="tab-panel" id="map-panel">
+      <div id="waypoint-map"></div>
+      <div id="map-hint">&#x2191; zoom in &nbsp; &#x2193; zoom out &nbsp; &#x21b5; center GPS</div>
+    </div><!-- /map-panel -->
+
+  </div><!-- /content -->
+
+  <!-- ── Status Bar ──────────────────────────────────────── -->
+  <div id="status-bar">
+    <div class="status-item">
+      <div class="status-dot on" id="status-dot-gps"></div>
+      <span>GPS</span>
+    </div>
+    <div class="status-item">
+      <div class="status-dot" id="status-dot-compass"></div>
+      <span>Compass</span>
+    </div>
+    <div style="flex:1"></div>
+    <span id="status-time">--:--</span>
+  </div>
+
+</div><!-- /app -->
+
+<script src="js/storage.js"></script>
+<script src="js/compass.js"></script>
+<script src="js/weather.js"></script>
+<script src="js/people.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="js/map.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

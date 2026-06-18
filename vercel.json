@@ -1,0 +1,6 @@
+{
+  "version": 2,
+  "rewrites": [
+    { "source": "/companion", "destination": "/companion.html" }
+  ]
+}
